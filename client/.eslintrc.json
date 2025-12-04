@@ -1,0 +1,18 @@
+{
+  "extends": ["react-app", "react-app/jest"],
+  "plugins": [],
+  "rules": {
+    // React Hooks rules are already included in react-app
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "warn",
+
+    // Example TailwindCSS integration (optional)
+    // This just allows you to not get warnings about className order
+    "tailwindcss/classnames-order": "off",
+
+    // General React/JS rules
+    "no-unused-vars": "warn",
+    "no-console": "warn",
+    "react/prop-types": "off"
+  }
+}
