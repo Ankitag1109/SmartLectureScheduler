@@ -3,7 +3,7 @@ import API from "../../utils/api";
 import AdminNavbar from "../../components/AdminNavbar";
 
 const InstructorList = () => {
-  const [instructors, setInstructors] = useState([]); // default as array
+  const [instructors, setInstructors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -12,7 +12,6 @@ const InstructorList = () => {
       try {
         const res = await API.get("/admin/instructors");
 
-        // Check if response is an array, otherwise empty array
         const data = Array.isArray(res.data) ? res.data : [];
         setInstructors(data);
       } catch (err) {
