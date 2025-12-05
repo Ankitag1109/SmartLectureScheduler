@@ -1,108 +1,174 @@
 const express = require("express");
 const router = express.Router();
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
+
 const Admin = require("../models/Admin");
 const Instructor = require("../models/Instructor");
 const Course = require("../models/Course");
 const Lecture = require("../models/Lecture");
+const { authMiddleware } = require("../middleware/authMiddleware");
 
-// ----------------------------
-// TEST ROUTE
-// ----------------------------
-router.get("/", (req, res) => {
-  res.json({ message: "Admin API running" });
-});
-
-// ----------------------------
-// LOGIN
-// ----------------------------
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-  const admin = await Admin.findOne({ email });
-  if (!admin) return res.status(401).json({ message: "Admin not found" });
-
-  if (admin.password !== password)
-    return res.status(401).json({ message: "Invalid password" });
-
-  res.json({ message: "Login successful", admin, token: "admin-dummy-token" });
-});
-
-// ----------------------------
-// INSTRUCTORS
-// ----------------------------
-router.post("/instructors", async (req, res) => {
   try {
-    const newInstructor = await Instructor.create(req.body);
-    res.json(newInstructor);
+    const { email, password } = req.body;
+
+    if (!email || !password)
+      return res.status(400).json({ message: "Email and password required" });
+
+    const admin = await Admin.findOne({ email });
+    if (!admin) return res.status(400).json({ message: "Admin not found" });
+
+    if (password !== admin.password)
+      return res.status(400).json({ message: "Invalid credentials" });
+
+    const token = jwt.sign(
+      { id: admin._id, role: "admin" },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.json({
+      token,
+      admin: { id: admin._id, name: admin.name, email: admin.email },
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Admin login error:", err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
-router.get("/instructors", async (req, res) => {
+router.post("/instructors", authMiddleware, async (req, res) => {
   try {
-    const instructors = await Instructor.find();
+    const { name, email, password, department } = req.body;
+
+    if (!name || !email || !password)
+      return res.status(400).json({ message: "All fields are required" });
+
+    const exists = await Instructor.findOne({ email });
+    if (exists)
+      return res.status(400).json({ message: "Instructor already exists" });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const instructor = new Instructor({
+      name,
+      email,
+      password: hashedPassword,
+      department,
+    });
+
+    await instructor.save();
+
+    res.status(201).json({
+      id: instructor._id,
+      name: instructor.name,
+      email: instructor.email,
+    });
+  } catch (err) {
+    console.error("Error adding instructor:", err);
+    res.status(500).json({ message: "Failed to add instructor" });
+  }
+});
+
+router.get("/instructors", authMiddleware, async (req, res) => {
+  try {
+    const instructors = await Instructor.find({}, "name email department");
     res.json(instructors);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching instructors:", err);
+    res.status(500).json({ message: "Failed to fetch instructors" });
   }
 });
 
-// ----------------------------
-// COURSES
-// ----------------------------
-router.post("/courses", async (req, res) => {
+router.post("/courses", authMiddleware, async (req, res) => {
   try {
-    const newCourse = await Course.create(req.body);
-    res.json(newCourse);
+    const { title, description, instructor } = req.body;
+
+    if (!title || !description || !instructor)
+      return res.status(400).json({ message: "All fields are required" });
+
+    const instructorExists = await Instructor.findById(instructor);
+    if (!instructorExists)
+      return res.status(400).json({ message: "Instructor not found" });
+
+    const course = new Course({ title, description, instructor });
+    await course.save();
+
+    const populated = await Course.findById(course._id).populate(
+      "instructor",
+      "name email"
+    );
+
+    res.status(201).json(populated);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error creating course:", err);
+    res.status(500).json({ message: "Failed to create course" });
   }
 });
 
-router.get("/courses", async (req, res) => {
+router.get("/courses", authMiddleware, async (req, res) => {
   try {
-    const courses = await Course.find().populate("instructorId", "name email");
+    const courses = await Course.find().populate("instructor", "name email");
     res.json(courses);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching courses:", err);
+    res.status(500).json({ message: "Failed to fetch courses" });
   }
 });
 
-// ----------------------------
-// LECTURES
-// ----------------------------
-router.post("/lectures", async (req, res) => {
+router.post("/create-lecture", verifyAdmin, async (req, res) => {
   try {
-    const newLecture = await Lecture.create(req.body);
-    res.json(newLecture);
+    const { title, date, course, instructor } = req.body;
+
+    if (!title || !date || !course || !instructor) {
+      return res.status(400).json({ message: "All fields required" });
+    }
+
+    const lectureDate = new Date(date).setHours(0, 0, 0, 0);
+
+    const existingLecture = await Lecture.findOne({
+      instructor,
+      date: {
+        $gte: new Date(lectureDate),
+        $lte: new Date(lectureDate + 24 * 60 * 60 * 1000),
+      },
+    });
+
+    if (existingLecture) {
+      return res.status(400).json({
+        message: "Instructor already has a lecture assigned on this date",
+      });
+    }
+
+    const newLecture = new Lecture({
+      title,
+      date,
+      course,
+      instructor,
+    });
+
+    await newLecture.save();
+
+    res.status(201).json({
+      message: "Lecture created successfully!",
+      lecture: newLecture,
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
-router.get("/lectures", async (req, res) => {
+router.get("/lectures", authMiddleware, async (req, res) => {
   try {
     const lectures = await Lecture.find()
-      .populate("courseId", "title")
-      .populate("instructorId", "name");
+      .populate("course", "title")
+      .populate("instructor", "name email");
     res.json(lectures);
   } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ----------------------------
-// DASHBOARD STATS
-// ----------------------------
-router.get("/dashboard", async (req, res) => {
-  try {
-    const admins = await Admin.countDocuments();
-    const instructors = await Instructor.countDocuments();
-    const courses = await Course.countDocuments();
-    const lectures = await Lecture.countDocuments();
-    res.json({ admins, instructors, courses, lectures });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching lectures:", err);
+    res.status(500).json({ message: "Failed to fetch lectures" });
   }
 });
 

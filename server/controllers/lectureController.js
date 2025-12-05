@@ -8,7 +8,6 @@ exports.assignLecture = async (req, res) => {
     if (!courseId || !instructorId || !date)
       return res.status(400).json({ message: "All fields are required" });
 
-    // Check if instructor is already assigned on that date
     const existing = await Lecture.findOne({ instructor: instructorId, date });
     if (existing)
       return res

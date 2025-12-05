@@ -1,10 +1,21 @@
 const mongoose = require("mongoose");
 
-const lectureSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  date: { type: Date, required: true },
-  courseId: { type: mongoose.Schema.Types.ObjectId, ref: "Course" },
-  instructorId: { type: mongoose.Schema.Types.ObjectId, ref: "Instructor" },
-});
+const lectureSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    date: { type: Date, required: true },
+    course: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Course",
+      required: true,
+    },
+    instructor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Instructor",
+      required: true,
+    },
+  },
+  { timestamps: true } // ✅ Correct placement
+);
 
 module.exports = mongoose.model("Lecture", lectureSchema);

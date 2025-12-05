@@ -1,4 +1,3 @@
-// src/pages/instructor/InstructorDashboard.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -11,37 +10,36 @@ const InstructorDashboard = () => {
   const [loading, setLoading] = useState(true);
   const token = localStorage.getItem("token");
 
-  // Get instructor name from localStorage
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem("instructorData"));
     if (data) setInstructorName(data.name);
   }, []);
 
-  // Fetch courses and lectures
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await axios.get(
-          "http://localhost:5000/api/instructor/dashboard",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+  const fetchDashboard = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get(
+        "http://localhost:5000/api/instructor/dashboard",
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-        setCourses(res.data.courseList || []);
-        setLectures(res.data.lectureList || []);
-        setLoading(false);
-      } catch (err) {
-        console.error("Failed to fetch lectures", err);
-        setLoading(false);
-      }
-    };
-    fetchData();
+      setCourses(res.data.courses || []);
+      setLectures(res.data.lectures || []);
+      setLoading(false);
+    } catch (err) {
+      console.error(err);
+      setCourses([]);
+      setLectures([]);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboard();
+    const interval = setInterval(fetchDashboard, 5000); // auto-refresh
+    return () => clearInterval(interval);
   }, [token]);
 
-  // Logout
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("instructorData");
@@ -50,7 +48,6 @@ const InstructorDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Navbar */}
       <nav className="bg-blue-600 text-white px-6 py-4 flex justify-between items-center">
         <h1 className="font-bold text-xl">Instructor Dashboard</h1>
         <div className="flex items-center gap-4">
@@ -64,7 +61,6 @@ const InstructorDashboard = () => {
         </div>
       </nav>
 
-      {/* Stats */}
       <div className="p-6">
         <h2 className="text-2xl font-semibold mb-4">Statistics</h2>
         {loading ? (
@@ -82,25 +78,39 @@ const InstructorDashboard = () => {
           </div>
         )}
 
-        {/* Course list */}
         <h2 className="text-xl font-semibold mb-2">Courses Assigned</h2>
-        <ul className="mb-4">
-          {courses.map((course) => (
-            <li key={course._id} className="bg-white p-2 rounded shadow mb-2">
-              {course.title}
-            </li>
-          ))}
-        </ul>
+        {courses.length === 0 ? (
+          <p>No courses assigned yet.</p>
+        ) : (
+          <ul className="mb-4">
+            {courses.map((c) => (
+              <li key={c._id} className="bg-white p-2 rounded shadow mb-2">
+                <strong>{c.title}</strong>
+                <br />
+                Instructor: {c.instructor?.name}
+              </li>
+            ))}
+          </ul>
+        )}
 
-        {/* Lecture list */}
         <h2 className="text-xl font-semibold mb-2">Lectures Assigned</h2>
-        <ul>
-          {lectures.map((lec) => (
-            <li key={lec._id} className="bg-white p-2 rounded shadow mb-2">
-              {lec.title} ({lec.courseId?.title || "No course assigned"})
-            </li>
-          ))}
-        </ul>
+        {lectures.length === 0 ? (
+          <p>No lectures assigned yet.</p>
+        ) : (
+          <ul>
+            {lectures.map((l) => (
+              <li key={l._id} className="bg-white p-2 rounded shadow mb-2">
+                <strong>{l.title}</strong>
+                <br />
+                Course: {l.course?.title}
+                <br />
+                Instructor: {l.instructor?.name}
+                <br />
+                Date: {new Date(l.date).toLocaleDateString()}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

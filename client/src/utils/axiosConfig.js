@@ -1,4 +1,3 @@
-// client/src/utils/axiosConfig.js
 import axios from "axios";
 
 const token = localStorage.getItem("adminToken");

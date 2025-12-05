@@ -1,4 +1,3 @@
-// server/middleware/verifyAdmin.js
 const jwt = require("jsonwebtoken");
 
 const verifyAdmin = (req, res, next) => {
@@ -7,7 +6,7 @@ const verifyAdmin = (req, res, next) => {
     if (!authHeader)
       return res.status(403).json({ message: "No token provided" });
 
-    const token = authHeader.split(" ")[1]; // Bearer token
+    const token = authHeader.split(" ")[1];
     if (!token) return res.status(403).json({ message: "No token provided" });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);

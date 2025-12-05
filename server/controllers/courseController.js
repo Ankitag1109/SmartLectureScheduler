@@ -1,7 +1,6 @@
 const Course = require("../models/Course");
 const Instructor = require("../models/Instructor");
 
-// Add a new course
 exports.addCourse = async (req, res) => {
   try {
     // multer populates req.body and req.file
@@ -26,7 +25,6 @@ exports.addCourse = async (req, res) => {
   }
 };
 
-// Get all courses
 exports.getCourses = async (req, res) => {
   try {
     const courses = await Course.find();
@@ -65,7 +63,6 @@ exports.assignLecture = async (req, res) => {
         .json({ message: "Course or instructor not found" });
     }
 
-    // Check conflict
     const isConflict = course.lectures.some(
       (lec) => lec.date === date && lec.instructor.toString() === instructorId
     );
@@ -88,7 +85,6 @@ exports.getAssignedLectures = async (req, res) => {
   try {
     const instructorId = req.user._id;
 
-    // Find all courses where this instructor has lectures
     const courses = await Course.find({ "lectures.instructor": instructorId });
 
     const lectures = [];

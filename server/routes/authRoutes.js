@@ -1,4 +1,3 @@
-// server/routes/authRoutes.js
 const express = require("express");
 const router = express.Router();
 const Admin = require("../models/Admin");
@@ -6,12 +5,10 @@ const Instructor = require("../models/Instructor");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
-// POST /api/login
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Try Admin login first
     let user = await Admin.findOne({ email });
     if (user && user.password === password) {
       const token = jwt.sign(
@@ -27,7 +24,6 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    // Try Instructor login
     user = await Instructor.findOne({ email });
     if (user && user.password === password) {
       const token = jwt.sign(

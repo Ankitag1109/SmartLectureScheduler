@@ -1,19 +1,23 @@
-// src/pages/RoleBasedLogin.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const RoleBasedLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("admin"); // default role
+  const [role, setRole] = useState("admin");
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setError("");
+
+    if (!email || !password) {
+      setError("Email and password required");
+      return;
+    }
 
     try {
-      // Determine API endpoint based on role
       const endpoint =
         role === "admin"
           ? "http://localhost:5000/api/admin/login"
@@ -32,21 +36,19 @@ const RoleBasedLogin = () => {
         return;
       }
 
-      // Save token and user info in localStorage based on role
+      // Save token and user info
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("role", role);
+
       if (role === "admin") {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("role", "admin");
         localStorage.setItem("adminData", JSON.stringify(data.admin));
         navigate("/admin/dashboard");
       } else {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("role", "instructor");
         localStorage.setItem("instructorData", JSON.stringify(data.instructor));
-        localStorage.setItem("name", data.instructor.name);
         navigate("/instructor/dashboard");
       }
     } catch (err) {
-      console.error(err);
+      console.error("Login error:", err);
       setError("Something went wrong. Try again.");
     }
   };
