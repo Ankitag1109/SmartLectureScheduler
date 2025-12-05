@@ -26,7 +26,10 @@ const RoleBasedLogin = () => {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email: email.trim(),
+          password: password.trim(),
+        }),
       });
 
       const data = await res.json();
@@ -36,14 +39,16 @@ const RoleBasedLogin = () => {
         return;
       }
 
-      // Save token and user info
       localStorage.setItem("token", data.token);
       localStorage.setItem("role", role);
 
       if (role === "admin") {
+        if (!data.admin) throw new Error("Admin data missing from response");
         localStorage.setItem("adminData", JSON.stringify(data.admin));
         navigate("/admin/dashboard");
       } else {
+        if (!data.instructor)
+          throw new Error("Instructor data missing from response");
         localStorage.setItem("instructorData", JSON.stringify(data.instructor));
         navigate("/instructor/dashboard");
       }
